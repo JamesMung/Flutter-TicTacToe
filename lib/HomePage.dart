@@ -36,6 +36,7 @@ class _HomePageState extends State<HomePage> {
   List<String> gameState;
 
   bool canMove = false;
+  int status;
 
   final hubConnection = HubConnectionBuilder().withUrl(serverUrl).build();
 
@@ -45,21 +46,16 @@ class _HomePageState extends State<HomePage> {
       await hubConnection.start();
       print("Connection established");
 
-      hubConnection.invoke("GetConnectionID", args: <Object> [playerName]);
-      hubConnection.on("ReceiveRegistorMessage", (e) => { handleRegisterMsg(e[0], e[1])});
+      //hubConnection.on("ReceiveRegistorMessage", (e) => { handleRegisterMsg(e[0], e[1])});
       hubConnection.on("SyncPlayRoomInfo", (e) => { getGameBoardInfo(e[0], e[1], e[2], e[3]) });
+      hubConnection.invoke("GetConnectionID", args: <Object> [playerName]);
     } catch(e) {
       showAlertDialog(context);
     }
   }
 
-  void handleRegisterMsg(succeed, msg) {
-    setState(() {
-
-    });
-  }
-
   void getGameBoardInfo(p1, p2, status, String trendString) {
+    print(p1 + p2 + status + trendString);
     setState(() {
       _p1 = p1;
       _p2 = p2;
@@ -72,6 +68,10 @@ class _HomePageState extends State<HomePage> {
         }
       }
 
+      if(status != "WS") {
+        this.status = 1;
+      }
+
       if(status == "W1" && role == 1) {
         canMove = true;
       } else if(status == "W2" && role == 2) {
@@ -80,16 +80,14 @@ class _HomePageState extends State<HomePage> {
 
       int idx = 0;
       trendString.split("").forEach((e) {
-        var matchedRole = int.parse(e);
+        int matchedRole = int.parse(e);
 
-        setState(() {
-          switch(matchedRole) {
-            case 0: this.gameState[idx++] = "empty"; break;
-            case 1: this.gameState[idx++] = "cross"; break;
-            case 2: this.gameState[idx++] = "circle"; break;
-          }
-          checkWin();
-        });
+        switch(matchedRole) {
+          case 0: this.gameState[idx++] = "empty"; break;
+          case 1: this.gameState[idx++] = "cross"; break;
+          case 2: this.gameState[idx++] = "circle"; break;
+        }
+        checkWin();
       });
     });
   }
@@ -127,6 +125,7 @@ class _HomePageState extends State<HomePage> {
     super.initState();
     this._p1 = '';
     this._p2 = '';
+    this.status = 0;
 
     _initSignalR();
     setState(() {
@@ -145,8 +144,11 @@ class _HomePageState extends State<HomePage> {
     });
   }
 
-  void registerPlayer() async {
+  registerPlayer() async {
       await hubConnection.invoke("RegisterPlayer", args: <Object>["R"]);
+      setState(() {
+        status = 1;
+      });
   }
 
   //TODO: playGame method
@@ -188,7 +190,11 @@ class _HomePageState extends State<HomePage> {
 
   exitGame() async {
     await hubConnection.invoke("RegisterPlayer", args: <Object>["E"]);
-    Delay();
+    canMove = false;
+    setState(() {
+      status = 0;
+      role = null;
+    });
   }
 
   //TODO: get image method
@@ -282,6 +288,25 @@ class _HomePageState extends State<HomePage> {
     }
   }
 
+  Widget _buildButton() {
+    return new MaterialButton(
+      color: Color(0xFF0A3D62),
+      minWidth: 300.0,
+      height: 70.0,
+      child: Text(
+        status == 0 ? "Start Game" : status == 1 ? "On hold..." : "Exit Game",
+        style: TextStyle(
+          color: Colors.white,
+          fontSize: 20.0,
+        ),
+      ),
+      onPressed: () => {status == 0 ? this.registerPlayer() : status == 1 ? null : this.exitGame()},
+      shape: ContinuousRectangleBorder(
+        borderRadius: BorderRadius.circular(85.0),
+      ),
+    );
+  }
+
   @override
   Widget build(BuildContext context) {
     return MaterialApp(
@@ -361,24 +386,7 @@ class _HomePageState extends State<HomePage> {
               ),
             ),
           ),
-          MaterialButton(
-            color: Color(0xFF0A3D62),
-            minWidth: 300.0,
-            height: 70.0,
-            child: Text(
-              "Start Game",
-              style: TextStyle(
-                color: Colors.white,
-                fontSize: 20.0,
-              ),
-            ),
-            onPressed: () {
-              this.registerPlayer();
-            },
-            shape: ContinuousRectangleBorder(
-              borderRadius: BorderRadius.circular(85.0),
-            ),
-          )
+          _buildButton(),
         ],
       ),
     ));
