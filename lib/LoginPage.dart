@@ -1,6 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:flutter/cupertino.dart';
-import 'package:tic_tac_toe/HomePage.dart';
+import 'package:tic_tac_toe/RoomListPage.dart';
 import 'package:tic_tac_toe/model/Player.dart';
 import 'package:http/http.dart' as http;
 
@@ -13,7 +13,7 @@ class LoginPage extends StatefulWidget {
 }
 
 class _LoginPageState extends State<LoginPage> {
-  static final loginUrl = "http://webhelpme.com:8090/api/Login/LoginUser";
+  static final loginUrl = "http://webhelpme.com:8092/api/Login/LoginUser";
 
   final _formKey = GlobalKey<FormState>();
   String _username;
@@ -21,18 +21,18 @@ class _LoginPageState extends State<LoginPage> {
 
   Future<Player> _processLogin() async {
     final response = await http.post(loginUrl,
-        headers: <String, String>{'Content-Type': 'application/json; charset=UTF-8'},
-        body: jsonEncode(<String, String>{
-          'username': _username,
-          'password': _password
-        }));
+        headers: <String, String>{
+          'Content-Type': 'application/json; charset=UTF-8'
+        },
+        body: jsonEncode(
+            <String, String>{'username': _username, 'password': _password}));
 
     var json = jsonDecode(response.body);
-    if(json['success'] == true) {
+    if (json['success'] == true) {
       Navigator.push(
           context,
           MaterialPageRoute(
-              builder: (context) => HomePage(_username),
+              builder: (context) => RoomListPage(_username),
               maintainState: false));
       return Player.parseForm(json);
     } else {
@@ -44,7 +44,7 @@ class _LoginPageState extends State<LoginPage> {
     Widget okButton = FlatButton(
       child: Text("OK"),
       onPressed: () {
-        Navigator.of(context).pop();
+        Navigator.of(context, rootNavigator: true).pop();
       },
     );
 
@@ -85,7 +85,8 @@ class _LoginPageState extends State<LoginPage> {
                           labelText: 'Username',
                         ),
                         validator: (value) {
-                          if (value.isEmpty) return 'Username should not be empty';
+                          if (value.isEmpty)
+                            return 'Username should not be empty';
                           return null;
                         },
                       ),
@@ -100,7 +101,8 @@ class _LoginPageState extends State<LoginPage> {
                           labelText: 'Password',
                         ),
                         validator: (value) {
-                          if (value.isEmpty) return 'Password should not be empty';
+                          if (value.isEmpty)
+                            return 'Password should not be empty';
                           return null;
                         },
                       ),

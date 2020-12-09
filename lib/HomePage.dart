@@ -1,29 +1,34 @@
+import 'dart:convert';
+
 import 'package:flutter/material.dart';
 import 'package:signalr_client/signalr_client.dart';
-import 'package:tic_tac_toe/LoginPage.dart';
 
 class HomePage extends StatefulWidget {
-
   String playerName;
+  var roomId;
 
-  HomePage(String username) {
+  HomePage(roomId, String username) {
     this.playerName = username;
+    this.roomId = roomId;
   }
 
   @override
-  _HomePageState createState() => _HomePageState(playerName);
+  _HomePageState createState() => _HomePageState(roomId, playerName);
 }
 
 class _HomePageState extends State<HomePage> {
-
+  var roomId;
   String playerName;
   String _p1;
   String _p2;
 
   int role;
 
-  _HomePageState(String playerName) {
+  List memberList;
+
+  _HomePageState(roomId, String playerName) {
     this.playerName = playerName;
+    this.roomId = roomId;
   }
 
   //TODO: link up images
@@ -31,7 +36,7 @@ class _HomePageState extends State<HomePage> {
   AssetImage circle = AssetImage("images/circle.png");
   AssetImage edit = AssetImage("images/edit.png");
 
-  static final serverUrl = "http://webhelpme.com:8090/gamehub";
+  static final serverUrl = "http://webhelpme.com:8092/gamehub";
   String message;
   List<String> gameState;
 
@@ -47,34 +52,50 @@ class _HomePageState extends State<HomePage> {
       print("Connection established");
 
       //hubConnection.on("ReceiveRegistorMessage", (e) => { handleRegisterMsg(e[0], e[1])});
-      hubConnection.on("SyncPlayRoomInfo", (e) => { getGameBoardInfo(e[0], e[1], e[2], e[3]) });
-      hubConnection.invoke("GetConnectionID", args: <Object> [playerName]);
-    } catch(e) {
+      hubConnection.on("SyncPlayRoomInfo",
+          (e) => {getGameBoardInfo(e[0], e[1], e[2], e[3])});
+      hubConnection.on(
+          "ReceivePlayerList", (e) => {updatePlayerInRoom(jsonDecode(e[0]))});
+      hubConnection
+          .invoke("GetConnectionID", args: <Object>[playerName, roomId]);
+    } catch (e) {
+      print(e);
       showAlertDialog(context);
     }
   }
 
+  void updatePlayerInRoom(List json) {
+    setState(() {
+      memberList = json.map((e) => e['UserName']).toList();
+    });
+  }
+
   void getGameBoardInfo(p1, p2, status, String trendString) {
-    print(p1 + p2 + status + trendString);
     setState(() {
       _p1 = p1;
       _p2 = p2;
 
-      if(role == null) {
-        if(_p1 == playerName) {
+      if (role == null) {
+        if (_p1 == playerName) {
           role = 1;
-        } else if (_p2 == playerName){
+        } else if (_p2 == playerName) {
           role = 2;
         }
       }
 
-      if(status != "WS") {
+      if (role == null && status != "WS") {
         this.status = 1;
+      } else if (role != null && status == "WS") {
+        this.status = 1;
+      } else if (status == "WS") {
+        this.status = 0;
+      } else if (role != null && status != "WS") {
+        this.status = 2;
       }
 
-      if(status == "W1" && role == 1) {
+      if (status == "W1" && role == 1) {
         canMove = true;
-      } else if(status == "W2" && role == 2) {
+      } else if (status == "W2" && role == 2) {
         canMove = true;
       }
 
@@ -82,10 +103,16 @@ class _HomePageState extends State<HomePage> {
       trendString.split("").forEach((e) {
         int matchedRole = int.parse(e);
 
-        switch(matchedRole) {
-          case 0: this.gameState[idx++] = "empty"; break;
-          case 1: this.gameState[idx++] = "cross"; break;
-          case 2: this.gameState[idx++] = "circle"; break;
+        switch (matchedRole) {
+          case 0:
+            this.gameState[idx++] = "empty";
+            break;
+          case 1:
+            this.gameState[idx++] = "cross";
+            break;
+          case 2:
+            this.gameState[idx++] = "circle";
+            break;
         }
         checkWin();
       });
@@ -95,13 +122,7 @@ class _HomePageState extends State<HomePage> {
   showAlertDialog(BuildContext context) {
     Widget okButton = FlatButton(
       child: Text("OK"),
-      onPressed: () {
-        Navigator.push(
-            context,
-            MaterialPageRoute(
-                builder: (context) => LoginPage(),
-                maintainState: false));
-      },
+      onPressed: () => {Navigator.of(context, rootNavigator: true).pop()},
     );
 
     AlertDialog alert = AlertDialog(
@@ -111,6 +132,38 @@ class _HomePageState extends State<HomePage> {
         okButton,
       ],
     );
+    showDialog(
+      context: context,
+      builder: (BuildContext context) {
+        return alert;
+      },
+    );
+  }
+
+  showMemberListDialog(BuildContext context) {
+    Widget okButton = FlatButton(
+      child: Text("Close"),
+      onPressed: () => {Navigator.of(context, rootNavigator: true).pop()},
+    );
+
+    AlertDialog alert = AlertDialog(
+      title: Text("Members"),
+      content: Container(
+          height: 300.0,
+          width: 300.0,
+          child: ListView.builder(
+              shrinkWrap: true,
+              itemCount: memberList.length,
+              itemBuilder: (con, idx) {
+                return ListTile(
+                    title: Text('${memberList[idx]}',
+                        style: TextStyle(color: Colors.black)));
+              })),
+      actions: [
+        okButton,
+      ],
+    );
+
     showDialog(
       context: context,
       builder: (BuildContext context) {
@@ -145,20 +198,17 @@ class _HomePageState extends State<HomePage> {
   }
 
   registerPlayer() async {
-      await hubConnection.invoke("RegisterPlayer", args: <Object>["R"]);
-      setState(() {
-        status = 1;
-      });
+    await hubConnection.invoke("RegisterPlayer", args: <Object>["R"]);
   }
 
   //TODO: playGame method
   playGame(int index) {
-    if(canMove) {
+    if (canMove) {
       if (this.gameState[index] == "empty") {
         setState(() {
           if (role == 1) {
             this.gameState[index] = "cross";
-          } else if(role == 2){
+          } else if (role == 2) {
             this.gameState[index] = "circle";
           }
           this.checkWin();
@@ -291,16 +341,26 @@ class _HomePageState extends State<HomePage> {
   Widget _buildButton() {
     return new MaterialButton(
       color: Color(0xFF0A3D62),
-      minWidth: 300.0,
+      minWidth: 150.0,
       height: 70.0,
       child: Text(
-        status == 0 ? "Start Game" : status == 1 ? "On hold..." : "Exit Game",
+        status == 0
+            ? "Start Game"
+            : status == 1
+                ? "On hold..."
+                : "Exit Game",
         style: TextStyle(
           color: Colors.white,
-          fontSize: 20.0,
+          fontSize: 15.0,
         ),
       ),
-      onPressed: () => {status == 0 ? this.registerPlayer() : status == 1 ? null : this.exitGame()},
+      onPressed: () => {
+        status == 0
+            ? this.registerPlayer()
+            : status == 1
+                ? null
+                : this.exitGame()
+      },
       shape: ContinuousRectangleBorder(
         borderRadius: BorderRadius.circular(85.0),
       ),
@@ -309,11 +369,10 @@ class _HomePageState extends State<HomePage> {
 
   @override
   Widget build(BuildContext context) {
-    return MaterialApp(
-        home: Scaffold(
+    return Scaffold(
       appBar: AppBar(
         title: Text(
-          "Tic Tac Toe",
+          "Room $roomId",
           style: TextStyle(
             color: Colors.white,
           ),
@@ -386,9 +445,36 @@ class _HomePageState extends State<HomePage> {
               ),
             ),
           ),
-          _buildButton(),
+          Row(
+            mainAxisAlignment: MainAxisAlignment.spaceEvenly,
+            children: <Widget>[
+              Column(
+                children: <Widget>[_buildButton()],
+              ),
+              Column(
+                children: <Widget>[
+                  MaterialButton(
+                    color: Color(0xFF0A3D62),
+                    minWidth: 150.0,
+                    height: 70.0,
+                    child: Text(
+                      "Member in Room",
+                      style: TextStyle(
+                        color: Colors.white,
+                        fontSize: 15.0,
+                      ),
+                    ),
+                    onPressed: () => {showMemberListDialog(context)},
+                    shape: ContinuousRectangleBorder(
+                      borderRadius: BorderRadius.circular(85.0),
+                    ),
+                  )
+                ],
+              )
+            ],
+          ),
         ],
       ),
-    ));
+    );
   }
 }
