@@ -43,7 +43,7 @@ class _HomePageState extends State<HomePage> {
   bool canMove = false;
   int status;
 
-  final hubConnection = HubConnectionBuilder().withUrl(serverUrl).build();
+  var hubConnection = HubConnectionBuilder().withUrl(serverUrl).build();
 
   void _initSignalR() async {
     try {
@@ -59,7 +59,6 @@ class _HomePageState extends State<HomePage> {
       hubConnection
           .invoke("GetConnectionID", args: <Object>[playerName, roomId]);
     } catch (e) {
-      print(e);
       showAlertDialog(context);
     }
   }
@@ -96,6 +95,10 @@ class _HomePageState extends State<HomePage> {
       if (status == "W1" && role == 1) {
         canMove = true;
       } else if (status == "W2" && role == 2) {
+        canMove = true;
+      }
+
+      if(status == "E1" && status == "E2" && role == 1) {
         canMove = true;
       }
 
@@ -141,6 +144,8 @@ class _HomePageState extends State<HomePage> {
   }
 
   showMemberListDialog(BuildContext context) {
+    hubConnection.invoke("UpdatePlayRoomInfo", args: <Object>['$roomId']);
+
     Widget okButton = FlatButton(
       child: Text("Close"),
       onPressed: () => {Navigator.of(context, rootNavigator: true).pop()},
@@ -339,7 +344,7 @@ class _HomePageState extends State<HomePage> {
   }
 
   Widget _buildButton() {
-    return new MaterialButton(
+    return MaterialButton(
       color: Color(0xFF0A3D62),
       minWidth: 150.0,
       height: 70.0,
@@ -367,114 +372,124 @@ class _HomePageState extends State<HomePage> {
     );
   }
 
+  onBackToPage() {
+    print("Close Connection");
+    hubConnection.stop();
+  }
+
   @override
   Widget build(BuildContext context) {
-    return Scaffold(
-      appBar: AppBar(
-        title: Text(
-          "Room $roomId",
-          style: TextStyle(
-            color: Colors.white,
+    return WillPopScope(
+        onWillPop: () async {
+          onBackToPage();
+          return true;
+        },
+        child: Scaffold(
+          appBar: AppBar(
+            title: Text(
+              "Room $roomId",
+              style: TextStyle(
+                color: Colors.white,
+              ),
+            ),
+            backgroundColor: Color(0xFF192A56),
           ),
-        ),
-        backgroundColor: Color(0xFF192A56),
-      ),
-      body: Column(
-        mainAxisAlignment: MainAxisAlignment.start,
-        crossAxisAlignment: CrossAxisAlignment.center,
-        children: <Widget>[
-          Padding(
-            padding: const EdgeInsets.only(top: 14.0),
-            child: Row(
-              mainAxisAlignment: MainAxisAlignment.spaceEvenly,
-              children: <Widget>[
-                Column(
+          body: Column(
+            mainAxisAlignment: MainAxisAlignment.start,
+            crossAxisAlignment: CrossAxisAlignment.center,
+            children: <Widget>[
+              Padding(
+                padding: const EdgeInsets.only(top: 14.0),
+                child: Row(
+                  mainAxisAlignment: MainAxisAlignment.spaceEvenly,
                   children: <Widget>[
-                    SizedBox(
-                      width: 50,
-                      height: 50,
-                      child: Image(image: this.getImage('cross')),
+                    Column(
+                      children: <Widget>[
+                        SizedBox(
+                          width: 50,
+                          height: 50,
+                          child: Image(image: this.getImage('cross')),
+                        ),
+                        Text('$_p1')
+                      ],
                     ),
-                    Text('$_p1')
+                    Column(),
+                    Column(
+                      children: <Widget>[
+                        SizedBox(
+                          width: 50,
+                          height: 50,
+                          child: Image(image: this.getImage('circle')),
+                        ),
+                        Text('$_p2')
+                      ],
+                    )
                   ],
                 ),
-                Column(),
-                Column(
-                  children: <Widget>[
-                    SizedBox(
-                      width: 50,
-                      height: 50,
-                      child: Image(image: this.getImage('circle')),
+              ),
+              Expanded(
+                child: GridView.builder(
+                  padding: EdgeInsets.all(15.0),
+                  gridDelegate: SliverGridDelegateWithFixedCrossAxisCount(
+                      crossAxisCount: 3,
+                      childAspectRatio: 1.0,
+                      crossAxisSpacing: 10.0,
+                      mainAxisSpacing: 10.0),
+                  itemCount: this.gameState.length,
+                  itemBuilder: (context, i) => SizedBox(
+                    width: 100.0,
+                    height: 100.0,
+                    child: MaterialButton(
+                      onPressed: () {
+                        this.playGame(i);
+                      },
+                      child: Image(
+                        image: this.getImage(this.gameState[i]),
+                      ),
                     ),
-                    Text('$_p2')
-                  ],
-                )
-              ],
-            ),
-          ),
-          Expanded(
-            child: GridView.builder(
-              padding: EdgeInsets.all(15.0),
-              gridDelegate: SliverGridDelegateWithFixedCrossAxisCount(
-                  crossAxisCount: 3,
-                  childAspectRatio: 1.0,
-                  crossAxisSpacing: 10.0,
-                  mainAxisSpacing: 10.0),
-              itemCount: this.gameState.length,
-              itemBuilder: (context, i) => SizedBox(
-                width: 100.0,
-                height: 100.0,
-                child: MaterialButton(
-                  onPressed: () {
-                    this.playGame(i);
-                  },
-                  child: Image(
-                    image: this.getImage(this.gameState[i]),
                   ),
                 ),
               ),
-            ),
-          ),
-          Container(
-            padding: EdgeInsets.all(20.0),
-            child: Text(
-              this.message,
-              style: TextStyle(
-                fontSize: 30.0,
-                fontWeight: FontWeight.bold,
+              Container(
+                padding: EdgeInsets.all(20.0),
+                child: Text(
+                  this.message,
+                  style: TextStyle(
+                    fontSize: 30.0,
+                    fontWeight: FontWeight.bold,
+                  ),
+                ),
               ),
-            ),
-          ),
-          Row(
-            mainAxisAlignment: MainAxisAlignment.spaceEvenly,
-            children: <Widget>[
-              Column(
-                children: <Widget>[_buildButton()],
-              ),
-              Column(
+              Row(
+                mainAxisAlignment: MainAxisAlignment.spaceEvenly,
                 children: <Widget>[
-                  MaterialButton(
-                    color: Color(0xFF0A3D62),
-                    minWidth: 150.0,
-                    height: 70.0,
-                    child: Text(
-                      "Member in Room",
-                      style: TextStyle(
-                        color: Colors.white,
-                        fontSize: 15.0,
-                      ),
-                    ),
-                    onPressed: () => {showMemberListDialog(context)},
-                    shape: ContinuousRectangleBorder(
-                      borderRadius: BorderRadius.circular(85.0),
-                    ),
+                  Column(
+                    children: <Widget>[_buildButton()],
+                  ),
+                  Column(
+                    children: <Widget>[
+                      MaterialButton(
+                        color: Color(0xFF0A3D62),
+                        minWidth: 150.0,
+                        height: 70.0,
+                        child: Text(
+                          "Member in Room",
+                          style: TextStyle(
+                            color: Colors.white,
+                            fontSize: 15.0,
+                          ),
+                        ),
+                        onPressed: () => {showMemberListDialog(context)},
+                        shape: ContinuousRectangleBorder(
+                          borderRadius: BorderRadius.circular(85.0),
+                        ),
+                      )
+                    ],
                   )
                 ],
-              )
+              ),
             ],
           ),
-        ],
-      ),
-    );
+        ));
   }
 }
