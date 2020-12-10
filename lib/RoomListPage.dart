@@ -47,12 +47,14 @@ class RoomListPageState extends State<RoomListPage> {
           itemCount: roomList == null ? 0 : roomList.length,
           itemBuilder: (con, ind) {
             return ListTile(
-                title: Text('Room ${ind+1}', style: TextStyle(color: Colors.black)),
+                title: Text('Room ${ind + 1}',
+                    style: TextStyle(color: Colors.black)),
                 onTap: () {
                   Navigator.push(
                       con,
                       MaterialPageRoute(
-                          builder: (cc) => HomePage(roomList[ind].roomId, username)));
+                          builder: (cc) =>
+                              HomePage(roomList[ind].roomId, username)));
                 });
           }),
       floatingActionButtonLocation: FloatingActionButtonLocation.centerDocked,
@@ -65,20 +67,22 @@ class RoomListPageState extends State<RoomListPage> {
   }
 
   createRoom() async {
-    final response = await http.post("http://webhelpme.com:8092/api/Login/CreateGameRoom",
+    final response = await http.post(
+        "http://webhelpme.com:8092/api/Login/CreateGameRoom",
         headers: <String, String>{
           'Content-Type': 'application/json; charset=UTF-8'
         },
         body: jsonEncode({"username": username}));
     var json = jsonDecode(response.body);
 
-    if(json == 1) {
+    if (json == 1) {
       getRoomList();
     }
   }
 
   getRoomList() async {
-    final response = await http.get("http://webhelpme.com:8092/api/Login/GetGameRoomList",
+    final response = await http.get(
+        "http://webhelpme.com:8092/api/Login/GetGameRoomList",
         headers: <String, String>{
           'Content-Type': 'application/json; charset=UTF-8'
         });
@@ -89,4 +93,3 @@ class RoomListPageState extends State<RoomListPage> {
     });
   }
 }
-

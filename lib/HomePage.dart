@@ -1,7 +1,7 @@
 import 'dart:convert';
 
 import 'package:flutter/material.dart';
-import 'package:signalr_client/signalr_client.dart';
+import 'package:signalr_client/hub_connection_builder.dart';
 
 class HomePage extends StatefulWidget {
   String playerName;
@@ -98,7 +98,7 @@ class _HomePageState extends State<HomePage> {
         canMove = true;
       }
 
-      if(status == "E1" && status == "E2" && role == 1) {
+      if((status == "E1" || status == "E2") && role == 1) {
         canMove = true;
       }
 
@@ -144,7 +144,7 @@ class _HomePageState extends State<HomePage> {
   }
 
   showMemberListDialog(BuildContext context) {
-    hubConnection.invoke("UpdatePlayRoomInfo", args: <Object>['$roomId']);
+    hubConnection.invoke("GetPlayerList");
 
     Widget okButton = FlatButton(
       child: Text("Close"),
