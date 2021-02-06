@@ -36,7 +36,11 @@ class _HomePageState extends State<HomePage> {
   AssetImage circle = AssetImage("images/circle.png");
   AssetImage edit = AssetImage("images/edit.png");
 
-  static final serverUrl = "http://webhelpme.com:8092/gamehub";
+  static final statusNotStart = 0;
+  static final statusPendingStart = 1;
+  static final statusGaming = 2;
+
+  static final serverUrl = "http://18.163.80.77:8092/gamehub";
   String message;
   List<String> gameState;
 
@@ -74,32 +78,29 @@ class _HomePageState extends State<HomePage> {
       _p1 = p1;
       _p2 = p2;
 
-      if (role == null) {
-        if (_p1 == playerName) {
+      // player register
+      if(status == "WS") {
+        if (role == null && _p1 == playerName) {
           role = 1;
-        } else if (_p2 == playerName) {
+          this.status = statusPendingStart;
+        } else if (role == null && _p2 == playerName) {
           role = 2;
+          this.status = statusPendingStart;
+        } else if (_p1 == null || _p2 == null){
+          this.status = statusNotStart;
         }
       }
 
-      if (role == null && status != "WS") {
-        this.status = 1;
-      } else if (role != null && status == "WS") {
-        this.status = 1;
-      } else if (status == "WS") {
-        this.status = 0;
-      } else if (role != null && status != "WS") {
-        this.status = 2;
+      if(status == "W1" || status == "W2") {
+        if (status == "W1" && role == 1) {
+          canMove = true;
+        } else if (status == "W2" && role == 2) {
+          canMove = true;
+        }
       }
 
-      if (status == "W1" && role == 1) {
-        canMove = true;
-      } else if (status == "W2" && role == 2) {
-        canMove = true;
-      }
-
-      if((status == "E1" || status == "E2") && role == 1) {
-        canMove = true;
+      if(status == "E1" || status == "E2" || status == "DR") {
+        canMove = false;
       }
 
       int idx = 0;
@@ -183,7 +184,7 @@ class _HomePageState extends State<HomePage> {
     super.initState();
     this._p1 = '';
     this._p2 = '';
-    this.status = 0;
+    this.status = -1;
 
     _initSignalR();
     setState(() {
@@ -247,7 +248,7 @@ class _HomePageState extends State<HomePage> {
     await hubConnection.invoke("RegisterPlayer", args: <Object>["E"]);
     canMove = false;
     setState(() {
-      status = 0;
+      status = statusNotStart;
       role = null;
     });
   }
@@ -272,6 +273,7 @@ class _HomePageState extends State<HomePage> {
     Future.delayed(const Duration(milliseconds: 1000), () {
       setState(() {
         this.resetGame();
+        hubConnection.invoke("UpdatePlayRoomInfo", args: <Object>[roomId]);
       });
     });
   }
@@ -349,9 +351,9 @@ class _HomePageState extends State<HomePage> {
       minWidth: 150.0,
       height: 70.0,
       child: Text(
-        status == 0
+        status == statusNotStart
             ? "Start Game"
-            : status == 1
+            : status == statusPendingStart
                 ? "On hold..."
                 : "Exit Game",
         style: TextStyle(
@@ -360,9 +362,9 @@ class _HomePageState extends State<HomePage> {
         ),
       ),
       onPressed: () => {
-        status == 0
+        status == statusNotStart
             ? this.registerPlayer()
-            : status == 1
+            : status == statusPendingStart
                 ? null
                 : this.exitGame()
       },
