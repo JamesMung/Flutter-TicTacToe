@@ -68,7 +68,7 @@ class RoomListPageState extends State<RoomListPage> {
 
   createRoom() async {
     final response = await http.post(
-        "http://webhelpme.com:8092/api/Login/CreateGameRoom",
+        "http://18.163.80.77:8092/api/Login/CreateGameRoom",
         headers: <String, String>{
           'Content-Type': 'application/json; charset=UTF-8'
         },
@@ -82,7 +82,7 @@ class RoomListPageState extends State<RoomListPage> {
 
   getRoomList() async {
     final response = await http.get(
-        "http://webhelpme.com:8092/api/Login/GetGameRoomList",
+        "http://18.163.80.77:8092/api/Login/GetGameRoomList",
         headers: <String, String>{
           'Content-Type': 'application/json; charset=UTF-8'
         });

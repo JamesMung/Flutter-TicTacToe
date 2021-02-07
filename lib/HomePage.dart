@@ -36,10 +36,6 @@ class _HomePageState extends State<HomePage> {
   AssetImage circle = AssetImage("images/circle.png");
   AssetImage edit = AssetImage("images/edit.png");
 
-  static final statusNotStart = 0;
-  static final statusPendingStart = 1;
-  static final statusGaming = 2;
-
   static final serverUrl = "http://18.163.80.77:8092/gamehub";
   String message;
   List<String> gameState;
@@ -74,20 +70,22 @@ class _HomePageState extends State<HomePage> {
   }
 
   void getGameBoardInfo(p1, p2, status, String trendString) {
+    print("p1: " + p1 + ", p2: " + p2 + ", status: " + status + ", board: " + trendString);
     setState(() {
       _p1 = p1;
       _p2 = p2;
 
-      // player register
+      if (role == null && _p1 == playerName) {
+        role = 1;
+      } else if (role == null && _p2 == playerName) {
+        role = 2;
+      }
+
       if(status == "WS") {
-        if (role == null && _p1 == playerName) {
-          role = 1;
-          this.status = statusPendingStart;
-        } else if (role == null && _p2 == playerName) {
-          role = 2;
-          this.status = statusPendingStart;
-        } else if (_p1 == null || _p2 == null){
-          this.status = statusNotStart;
+        if(role != null) {
+          this.status = 1;
+        } else if (_p1 == '' || _p2 == '') {
+          this.status = 0;
         }
       }
 
@@ -96,6 +94,12 @@ class _HomePageState extends State<HomePage> {
           canMove = true;
         } else if (status == "W2" && role == 2) {
           canMove = true;
+        }
+
+        if(role != null) {
+          this.status = 2;
+        } else if (_p1 != '' && _p2 != '') {
+          this.status = 1;
         }
       }
 
@@ -184,7 +188,8 @@ class _HomePageState extends State<HomePage> {
     super.initState();
     this._p1 = '';
     this._p2 = '';
-    this.status = -1;
+    this.status = 0;
+    this.role = null;
 
     _initSignalR();
     setState(() {
@@ -248,7 +253,7 @@ class _HomePageState extends State<HomePage> {
     await hubConnection.invoke("RegisterPlayer", args: <Object>["E"]);
     canMove = false;
     setState(() {
-      status = statusNotStart;
+      status = 0;
       role = null;
     });
   }
@@ -269,13 +274,13 @@ class _HomePageState extends State<HomePage> {
   }
 
   //Delay Effect
-  Delay() {
-    Future.delayed(const Duration(milliseconds: 1000), () {
+  Delay() async {
+    Future.delayed(const Duration(milliseconds: 1500), () {
       setState(() {
         this.resetGame();
-        hubConnection.invoke("UpdatePlayRoomInfo", args: <Object>[roomId]);
       });
     });
+    await hubConnection.invoke("UpdatePlayRoomInfo", args: <Object>[roomId]);
   }
 
   //TODO: check for win logic
@@ -351,9 +356,9 @@ class _HomePageState extends State<HomePage> {
       minWidth: 150.0,
       height: 70.0,
       child: Text(
-        status == statusNotStart
+        status == 0
             ? "Start Game"
-            : status == statusPendingStart
+            : status == 1
                 ? "On hold..."
                 : "Exit Game",
         style: TextStyle(
@@ -362,9 +367,9 @@ class _HomePageState extends State<HomePage> {
         ),
       ),
       onPressed: () => {
-        status == statusNotStart
+        status == 0
             ? this.registerPlayer()
-            : status == statusPendingStart
+            : status == 1
                 ? null
                 : this.exitGame()
       },

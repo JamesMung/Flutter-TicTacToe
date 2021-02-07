@@ -13,7 +13,7 @@ class LoginPage extends StatefulWidget {
 }
 
 class _LoginPageState extends State<LoginPage> {
-  static final loginUrl = "http://webhelpme.com:8092/api/Login/LoginUser";
+  static final loginUrl = "http://18.163.80.77:8092/api/Login/LoginUser";
 
   final _formKey = GlobalKey<FormState>();
   String _username;
