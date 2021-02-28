@@ -41,6 +41,7 @@ class _HomePageState extends State<HomePage> {
   List<String> gameState;
 
   bool canMove = false;
+  bool gameComplete = false;
   int status;
 
   var hubConnection = HubConnectionBuilder().withUrl(serverUrl).build();
@@ -105,25 +106,39 @@ class _HomePageState extends State<HomePage> {
 
       if(status == "E1" || status == "E2" || status == "DR") {
         canMove = false;
+        gameComplete = true;
+        renderGameBoard(trendString);
       }
 
-      int idx = 0;
-      trendString.split("").forEach((e) {
-        int matchedRole = int.parse(e);
+      if(gameComplete) {
+        Future.delayed(const Duration(milliseconds: 3000), () {
+          renderGameBoard(trendString);
+          gameComplete = false;
+        });
+      } else {
+        renderGameBoard(trendString);
+      }
 
-        switch (matchedRole) {
-          case 0:
-            this.gameState[idx++] = "empty";
-            break;
-          case 1:
-            this.gameState[idx++] = "cross";
-            break;
-          case 2:
-            this.gameState[idx++] = "circle";
-            break;
-        }
-        checkWin();
-      });
+    });
+  }
+
+  renderGameBoard(String trendString) {
+    int idx = 0;
+    trendString.split("").forEach((e) {
+      int matchedRole = int.parse(e);
+
+      switch (matchedRole) {
+        case 0:
+          this.gameState[idx++] = "empty";
+          break;
+        case 1:
+          this.gameState[idx++] = "cross";
+          break;
+        case 2:
+          this.gameState[idx++] = "circle";
+          break;
+      }
+      checkWin();
     });
   }
 
@@ -275,7 +290,7 @@ class _HomePageState extends State<HomePage> {
 
   //Delay Effect
   Delay() async {
-    Future.delayed(const Duration(milliseconds: 1500), () {
+    Future.delayed(const Duration(milliseconds: 3000), () {
       setState(() {
         this.resetGame();
       });
